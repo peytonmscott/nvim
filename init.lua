@@ -20,78 +20,13 @@
 =====================================================================
 =====================================================================
 
-What is Kickstart?
-
-  Kickstart.nvim is *not* a distribution.
-
-  Kickstart.nvim is a starting point for your own configuration.
-    The goal is that you can read every line of code, top-to-bottom, understand
-    what your configuration is doing, and modify it to suit your needs.
-
-    Once you've done that, you can start exploring, configuring and tinkering to
-    make Neovim your own! That might mean leaving Kickstart just the way it is for a while
-    or immediately breaking it into modular pieces. It's up to you!
-
-    If you don't know anything about Lua, I recommend taking some time to read through
-    a guide. One possible example which will only take 10-15 minutes:
-      - https://learnxinyminutes.com/docs/lua/
-
-    After understanding a bit more about Lua, you can use `:help lua-guide` as a
-    reference for how Neovim integrates Lua.
-    - :help lua-guide
-    - (or HTML version): https://neovim.io/doc/user/lua-guide.html
-
-Kickstart Guide:
-
-  TODO: The very first thing you should do is to run the command `:Tutor` in Neovim.
-
-    If you don't know what this means, type the following:
-      - <escape key>
-      - :
-      - Tutor
-      - <enter key>
-
-    (If you already know the Neovim basics, you can skip this step.)
-
-  Once you've completed that, you can continue working through **AND READING** the rest
-  of the kickstart init.lua.
-
-  Next, run AND READ `:help`.
-    This will open up a help window with some basic information
-    about reading, navigating and searching the builtin help documentation.
-
-    This should be the first place you go to look when you're stuck or confused
-    with something. It's one of my favorite Neovim features.
-
-    MOST IMPORTANTLY, we provide a keymap "<space>sh" to [s]earch the [h]elp documentation,
-    which is very useful when you're not exactly sure of what you're looking for.
-
-  I have left several `:help X` comments throughout the init.lua
-    These are hints about where to find more information about the relevant settings,
-    plugins or Neovim features used in Kickstart.
-
-   NOTE: Look for lines like this
-
-    Throughout the file. These are for you, the reader, to help you understand what is happening.
-    Feel free to delete them once you know what you're doing, but they should serve as a guide
-    for when you are first encountering a few different constructs in your Neovim config.
-
-If you experience any errors while trying to install kickstart, run `:checkhealth` for more info.
-
-I hope you enjoy your Neovim journey,
-- TJ
-
-P.S. You can delete this when you're done too. It's your config now! :)
 --]]
 
--- Set <space> as the leader key
--- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
+-- Set <space> as the leader key
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
-
--- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -100,13 +35,10 @@ vim.g.have_nerd_font = false
 
 -- Make line numbers default
 vim.o.number = true
--- You can also add relative line numbers, to help with jumping.
---  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
-
+-- Make line numbers relative
+vim.o.relativenumber = true
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
-
 -- Don't show the mode, since it's already in the status line
 vim.o.showmode = false
 
@@ -127,6 +59,13 @@ vim.o.undofile = true
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.o.ignorecase = true
 vim.o.smartcase = true
+
+-- Indentation defaults
+vim.o.expandtab = true
+vim.o.shiftwidth = 2
+vim.o.tabstop = 2
+vim.o.softtabstop = 2
+vim.o.smartindent = true
 
 -- Keep signcolumn on by default
 vim.o.signcolumn = 'yes'
@@ -175,6 +114,8 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+
+vim.keymap.set('n', 'gl', vim.diagnostic.open_float, { desc = 'Line diagnostics' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -493,6 +434,21 @@ require('lazy').setup({
       'saghen/blink.cmp',
     },
     config = function()
+      local util = require 'lspconfig.util'
+      -- Register JetBrains Kotlin LSP as a custom server
+      local lspconfig = require 'lspconfig'
+      lspconfig.kotlin_lsp = {
+        default_config = {
+          cmd = { 'kotlin-lsp' }, -- JetBrains binary on PATH (or absolute path)
+          filetypes = { 'kotlin', 'kotlin_script' },
+          root_dir = function(fname)
+            return util.root_pattern('settings.gradle', 'settings.gradle.kts', 'build.gradle', 'build.gradle.kts', '.git')(fname) or vim.fs.dirname(fname)
+          end,
+          single_file_support = false,
+          settings = {},
+          init_options = {},
+        },
+      }
       -- Brief aside: **What is LSP?**
       --
       -- LSP is an initialism you've probably heard, but might not understand what it is.
@@ -698,6 +654,42 @@ require('lazy').setup({
             },
           },
         },
+        -- I added these:
+        jdtls = {
+          settings = {
+            java = {
+              configuration = {
+                runtimes = {
+                  { name = 'JavaSE-1.8', path = '/usr/lib/jvm/java-8-openjdk/' },
+                  { name = 'JavaSE-11', path = '/usr/lib/jvm/java-11-openjdk/' },
+                },
+              },
+              eclipse = {
+                downloadSources = true,
+              },
+            },
+          },
+        },
+        lemminx = {
+          filetypes = { 'xml' },
+          settings = {
+            xml = {
+              validation = {
+                enabled = true,
+                namespaces = { enabled = 'always' },
+              },
+            },
+          },
+        },
+        sourcekit = {
+          capabilities = {
+            workspace = {
+              didChangeWatchedFiles = {
+                dynamicRegistration = true,
+              },
+            },
+          },
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -713,9 +705,16 @@ require('lazy').setup({
       --
       -- You can add other tools here that you want Mason to install
       -- for you, so that they are available from within Neovim.
-      local ensure_installed = vim.tbl_keys(servers or {})
+      local ensure_installed = {}
+      for server_name, _ in pairs(servers or {}) do
+        if server_name ~= 'sourcekit' then
+          table.insert(ensure_installed, server_name)
+        end
+      end
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'jdtls', -- Java lsp
+        'lemminx', -- XML lsp
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -733,6 +732,27 @@ require('lazy').setup({
           end,
         },
       }
+    end,
+  },
+
+  { -- Linting
+    'mfussenegger/nvim-lint',
+    event = { 'BufReadPre', 'BufNewFile' },
+    config = function()
+      local lint = require('lint')
+      lint.linters_by_ft = {
+        swift = { 'swiftlint' },
+      }
+      local lint_augroup = vim.api.nvim_create_augroup('lint', { clear = true })
+      vim.api.nvim_create_autocmd({ 'BufWritePost', 'BufReadPost', 'InsertLeave', 'TextChanged' }, {
+        group = lint_augroup,
+        callback = function()
+          require('lint').try_lint()
+        end,
+      })
+      vim.keymap.set('n', '<leader>ml', function()
+        require('lint').try_lint()
+      end, { desc = 'Lint file' })
     end,
   },
 
@@ -768,6 +788,7 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        swift = { 'swiftformat' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -901,6 +922,100 @@ require('lazy').setup({
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
+  { -- Xcode build and test
+    'wojciech-kulik/xcodebuild.nvim',
+    dependencies = {
+      'nvim-telescope/telescope.nvim',
+      'MunifTanjim/nui.nvim',
+    },
+    config = function()
+      require('xcodebuild').setup({
+        code_coverage = {
+          enabled = true,
+        },
+      })
+      vim.keymap.set('n', '<leader>xl', '<cmd>XcodebuildToggleLogs<cr>', { desc = 'Toggle Xcodebuild Logs' })
+      vim.keymap.set('n', '<leader>xb', '<cmd>XcodebuildBuild<cr>', { desc = 'Build Project' })
+      vim.keymap.set('n', '<leader>xr', '<cmd>XcodebuildBuildRun<cr>', { desc = 'Build & Run Project' })
+      vim.keymap.set('n', '<leader>xt', '<cmd>XcodebuildTest<cr>', { desc = 'Run Tests' })
+      vim.keymap.set('n', '<leader>xT', '<cmd>XcodebuildTestClass<cr>', { desc = 'Run This Test Class' })
+      vim.keymap.set('n', '<leader>X', '<cmd>XcodebuildPicker<cr>', { desc = 'Show All Xcodebuild Actions' })
+      vim.keymap.set('n', '<leader>xd', '<cmd>XcodebuildSelectDevice<cr>', { desc = 'Select Device' })
+      vim.keymap.set('n', '<leader>xp', '<cmd>XcodebuildSelectTestPlan<cr>', { desc = 'Select Test Plan' })
+      vim.keymap.set('n', '<leader>xc', '<cmd>XcodebuildToggleCodeCoverage<cr>', { desc = 'Toggle Code Coverage' })
+      vim.keymap.set('n', '<leader>xC', '<cmd>XcodebuildShowCodeCoverageReport<cr>', { desc = 'Show Code Coverage Report' })
+      vim.keymap.set('n', '<leader>xq', '<cmd>Telescope quickfix<cr>', { desc = 'Show QuickFix List' })
+    end,
+  },
+
+  { -- Debugging
+    'mfussenegger/nvim-dap',
+    dependencies = { 'wojciech-kulik/xcodebuild.nvim' },
+    config = function()
+      local xcodebuild = require('xcodebuild.integrations.dap')
+      -- TODO: change it to your local codelldb path
+      local codelldbPath = vim.fn.stdpath('config') .. '/tools/codelldb-aarch64-darwin/extension/adapter/codelldb'
+      xcodebuild.setup(codelldbPath)
+      vim.keymap.set('n', '<leader>dd', xcodebuild.build_and_debug, { desc = 'Build & Debug' })
+      vim.keymap.set('n', '<leader>dr', xcodebuild.debug_without_build, { desc = 'Debug Without Building' })
+      vim.keymap.set('n', '<leader>dt', xcodebuild.debug_tests, { desc = 'Debug Tests' })
+      vim.keymap.set('n', '<leader>dT', xcodebuild.debug_class_tests, { desc = 'Debug Class Tests' })
+      vim.keymap.set('n', '<leader>b', xcodebuild.toggle_breakpoint, { desc = 'Toggle Breakpoint' })
+      vim.keymap.set('n', '<leader>B', xcodebuild.toggle_message_breakpoint, { desc = 'Toggle Message Breakpoint' })
+      vim.keymap.set('n', '<leader>dx', xcodebuild.terminate_session, { desc = 'Terminate Debugger' })
+    end,
+  },
+
+  { -- DAP UI
+    'rcarriga/nvim-dap-ui',
+    dependencies = { 'mfussenegger/nvim-dap' },
+    config = function()
+      require('dapui').setup({
+        controls = {
+          element = 'repl',
+          enabled = true,
+        },
+        floating = {
+          border = 'single',
+          mappings = {
+            close = { 'q', '<Esc>' },
+          },
+        },
+        icons = { collapsed = '', expanded = '', current_frame = '' },
+        layouts = {
+          {
+            elements = {
+              { id = 'stacks', size = 0.25 },
+              { id = 'scopes', size = 0.25 },
+              { id = 'breakpoints', size = 0.25 },
+              { id = 'watches', size = 0.25 },
+            },
+            position = 'left',
+            size = 60,
+          },
+          {
+            elements = {
+              { id = 'repl', size = 0.35 },
+              { id = 'console', size = 0.65 },
+            },
+            position = 'bottom',
+            size = 10,
+          },
+        },
+      })
+      local dap, dapui = require('dap'), require('dapui')
+      dap.listeners.after.event_initialized['dapui_config'] = function()
+        dapui.open()
+      end
+      dap.listeners.before.event_terminated['dapui_config'] = function()
+        dapui.close()
+      end
+      dap.listeners.before.event_exited['dapui_config'] = function()
+        dapui.close()
+      end
+    end,
+  },
+
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
     config = function()
@@ -944,7 +1059,24 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'kotlin',
+        'java',
+        'xml',
+        'groovy',
+        'swift',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -972,20 +1104,16 @@ require('lazy').setup({
   --
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
-  --
-  -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
-  -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
-  --    This is the easiest way to modularize your config.
-  --
-  --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
-  --
+  require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+
+  { import = 'custom.plugins' },
+
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
